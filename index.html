@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusAI • 极简 AI 聊天平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap');
+        
+        body {
+            font-family: 'Inter', 'Noto Sans SC', system_ui, sans-serif;
+        }
+        
+        .font-display {
+            font-family: 'Noto Sans SC', 'Inter', system_ui, sans-serif;
+            font-weight: 700;
+        }
+
+        .section-header {
+            font-size: 2.25rem;
+            line-height: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .chat-bubble-user {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border-radius: 20px 20px 4px 20px;
+        }
+
+        .chat-bubble-ai {
+            background-color: #f1e7ff;
+            color: #312e81;
+            border-radius: 20px 20px 20px 4px;
+        }
+
+        .feature-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+        }
+
+        .logo-pill {
+            transition: all 0.2s ease;
+        }
+        
+        .logo-pill:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05);
+        }
+
+        .streaming-text {
+            white-space: pre-wrap;
+            line-height: 1.65;
+        }
+
+        .chat-container {
+            scrollbar-width: thin;
+            scrollbar-color: #e2e8f0 #f8fafc;
+        }
+
+        .minimal-shadow {
+            box-shadow: 0 10px 15px -3px rgb(15 23 42 / 0.05), 
+                       0 4px 6px -4px rgb(15 23 42 / 0.05);
+        }
+
+        .green-online {
+            position: relative;
+        }
+        .green-online::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: -1px;
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border: 2px solid white;
+            border-radius: 9999px;
+            box-shadow: 0 0 0 2px #10b981;
+        }
+
+        .deepseek-badge {
+            background: linear-gradient(90deg, #10b981, #34d399);
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+
+        /* ===== NEW FEATURE STYLES ===== */
+
+        /* Copy button on AI bubbles */
+        .msg-actions {
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        .msg-row:hover .msg-actions {
+            opacity: 1;
+        }
+        .copy-btn {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #8b5cf6;
+            background: #f5f3ff;
+            border: 1px solid #e9e5ff;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .copy-btn:hover { background: #ede9fe; }
+        .copy-btn.copied { color: #10b981; background: #ecfdf5; border-color: #a7f3d0; }
+
+        /* Code block copy button */
+        .code-block-wrapper { position: relative; }
+        .code-copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #94a3b8;
+            background: rgba(30,41,59,0.8);
+            border: 1px solid rgba(100,116,139,0.3);
+            transition: all 0.15s;
+            z-index: 2;
+        }
+        .code-copy-btn:hover { color: #e2e8f0; background: rgba(30,41,59,0.95); }
+        .code-copy-btn.copied { color: #34d399; }
+
+        /* Feedback buttons */
+        .feedback-btn {
+            cursor: pointer;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #94a3b8;
+            background: transparent;
+            border: 1px solid transparent;
+            transition: all 0.15s;
+        }
+        .feedback-btn:hover { color: #6366f1; background: #f5f3ff; border-color: #e9e5ff; }
+        .feedback-btn.active-like { color: #10b981; background: #ecfdf5; border-color: #a7f3d0; }
+        .feedback-btn.active-dislike { color: #ef4444; background: #fef2f2; border-color: #fecaca; }
+
+        /* Settings panel */
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 400px;
+            max-width: 90vw;
+            height: 100vh;
+            background: white;
+            z-index: 110;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.08);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+        }
+        .settings-panel.open { right: 0; }
+        .settings-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 105;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .settings-overlay.open { opacity: 1; pointer-events: auto; }
+
+        /* Prompt library modal */
+        .prompt-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 120;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .prompt-modal-overlay.open { display: flex; }
+
+        /* Conversation sidebar */
+        .conv-sidebar {
+            position: fixed;
+            top: 0;
+            left: -320px;
+            width: 300px;
+            max-width: 80vw;
+            height: 100vh;
+            background: white;
+            z-index: 110;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.08);
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+        }
+        .conv-sidebar.open { left: 0; }
+        .conv-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 105;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .conv-overlay.open { opacity: 1; pointer-events: auto; }
+
+        /* Auto-expand textarea */
+        #chat-input {
+            resize: none;
+            overflow-y: hidden;
+            min-height: 24px;
+            max-height: 120px;
+            line-height: 24px;
+        }
+
+        /* Stop generation button */
+        .stop-btn {
+            display: none;
+            animation: pulse-stop 1.5s infinite;
+        }
+        @keyframes pulse-stop {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Toast notification */
+        .nx-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            background: #1e293b;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 16px;
+            font-size: 13px;
+            z-index: 300;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+        .nx-toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Temperature slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #6366f1;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+        }
+
+        /* Deep thinking toggle */
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-switch.active { background: #6366f1; }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .toggle-switch.active::after { transform: translateX(20px); }
+
+        /* Prompt template card */
+        .prompt-card {
+            cursor: pointer;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            transition: all 0.15s;
+        }
+        .prompt-card:hover {
+            border-color: #c7d2fe;
+            background: #f5f3ff;
+            transform: translateY(-1px);
+        }
+
+        /* SDK code copy */
+        .sdk-copy-btn {
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 11px;
+            color: #94a3b8;
+            background: rgba(30,41,59,0.6);
+            border: 1px solid rgba(100,116,139,0.3);
+            transition: all 0.15s;
+        }
+        .sdk-copy-btn:hover { color: #e2e8f0; }
+        .sdk-copy-btn.copied { color: #34d399; }
+
+        /* System prompt card */
+        .sys-prompt-card {
+            position: relative;
+        }
+        .sys-prompt-copy {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #6366f1;
+            background: #f5f3ff;
+            border: 1px solid #e9e5ff;
+            transition: all 0.15s;
+        }
+        .sys-prompt-copy:hover { background: #ede9fe; }
+        .sys-prompt-copy.copied { color: #10b981; background: #ecfdf5; border-color: #a7f3d0; }
+        .sys-prompt-apply {
+            position: absolute;
+            top: 12px;
+            right: 90px;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: white;
+            background: #6366f1;
+            border: 1px solid #6366f1;
+            transition: all 0.15s;
+        }
+        .sys-prompt-apply:hover { background: #4f46e5; }
+
+        /* Demo mode banner */
+        .demo-banner {
+            background: linear-gradient(90deg, #fef3c7, #fde68a);
+            color: #92400e;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 16px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+    <!-- Demo Mode Banner -->
+    <div id="demo-banner" class="demo-banner">
+        <i class="fa-solid fa-wifi-slash mr-1"></i>
+        后端不可用，已切换至本地演示模式 • 对话将使用模拟响应
+    </div>
+
+    <!-- Toast Container -->
+    <div id="nx-toast" class="nx-toast">
+        <i class="fa-solid fa-check-circle text-emerald-400"></i>
+        <span id="nx-toast-text"></span>
+    </div>
+
+    <!-- ===== Conversation Sidebar ===== -->
+    <div id="conv-overlay" class="conv-overlay" onclick="toggleConvSidebar()"></div>
+    <div id="conv-sidebar" class="conv-sidebar">
+        <div class="p-5">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-bold text-lg">对话列表</h3>
+                <button onclick="toggleConvSidebar()" class="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <button onclick="newConversation()" class="w-full py-2.5 mb-4 text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white rounded-2xl flex items-center justify-center gap-x-2 transition-colors">
+                <i class="fa-solid fa-plus text-xs"></i> 新对话
+            </button>
+            <div id="conv-list" class="space-y-1.5"></div>
+        </div>
+    </div>
+
+    <!-- ===== Settings Panel ===== -->
+    <div id="settings-overlay" class="settings-overlay" onclick="toggleSettings()"></div>
+    <div id="settings-panel" class="settings-panel">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-bold text-xl">设置</h3>
+                <button onclick="toggleSettings()" class="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Model Selection -->
+            <div class="mb-6">
+                <label class="text-sm font-semibold text-slate-700 mb-2 block">模型选择</label>
+                <select id="model-select" onchange="onModelChange(this.value)" class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-200">
+                    <option value="deepseek-v4-pro">DeepSeek-V4-Pro</option>
+                    <option value="gpt-4">GPT-4</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    <option value="claude-3-opus">Claude 3 Opus</option>
+                    <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                    <option value="gemini-pro">Gemini Pro</option>
+                </select>
+            </div>
+
+            <!-- Deep Thinking Toggle -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">深度思考模式</label>
+                        <p class="text-xs text-slate-500 mt-0.5">启用更深入的推理分析</p>
+                    </div>
+                    <div id="deep-think-toggle" class="toggle-switch" onclick="toggleDeepThink()"></div>
+                </div>
+            </div>
+
+            <!-- Temperature -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="text-sm font-semibold text-slate-700">Temperature</label>
+                    <span id="temp-value" class="text-sm font-mono text-violet-600 font-semibold">0.7</span>
+                </div>
+                <input id="temp-slider" type="range" min="0" max="2" step="0.1" value="0.7" oninput="onTempChange(this.value)">
+                <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+                    <span>精确 (0)</span>
+                    <span>平衡 (1)</span>
+                    <span>创意 (2)</span>
+                </div>
+            </div>
+
+            <!-- System Prompt -->
+            <div class="mb-6">
+                <label class="text-sm font-semibold text-slate-700 mb-2 block">系统提示词 (System Prompt)</label>
+                <textarea id="system-prompt" rows="5" placeholder="输入自定义系统提示词..." 
+                    class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm resize-y focus:outline-none focus:ring-2 focus:ring-violet-200"
+                    oninput="onSystemPromptChange(this.value)">你是一个由DeepSeek-V4-Pro驱动的智能AI助手。请用中文回复，保持专业、准确、有条理。逐步思考后再给出答案。</textarea>
+            </div>
+
+            <!-- Keyboard Shortcuts Info -->
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <h4 class="text-xs font-bold text-slate-500 mb-3 tracking-wide">快捷键</h4>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between"><span class="text-slate-600">打开提示词库</span><kbd class="px-2 py-0.5 bg-white border rounded-lg text-slate-500 font-mono">Ctrl+K</kbd></div>
+                    <div class="flex justify-between"><span class="text-slate-600">发送消息</span><kbd class="px-2 py-0.5 bg-white border rounded-lg text-slate-500 font-mono">Enter</kbd></div>
+                    <div class="flex justify-between"><span class="text-slate-600">换行</span><kbd class="px-2 py-0.5 bg-white border rounded-lg text-slate-500 font-mono">Shift+Enter</kbd></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Prompt Library Modal ===== -->
+    <div id="prompt-modal" class="prompt-modal-overlay" onclick="closePromptModal()">
+        <div onclick="event.stopImmediatePropagation()" class="bg-white rounded-3xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
+            <div class="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-x-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-violet-600"></i>
+                    <h3 class="font-bold text-lg">提示词模板库</h3>
+                </div>
+                <button onclick="closePromptModal()" class="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <!-- Search -->
+            <div class="px-6 py-3 border-b flex-shrink-0">
+                <div class="flex items-center gap-x-2 bg-slate-50 rounded-2xl px-4 py-2.5 border border-slate-200">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400 text-sm"></i>
+                    <input id="prompt-search" type="text" placeholder="搜索提示词模板..." class="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" oninput="filterPrompts(this.value)">
+                </div>
+            </div>
+            <!-- Categories -->
+            <div class="px-6 py-3 border-b flex-shrink-0">
+                <div id="prompt-categories" class="flex gap-2 flex-wrap">
+                    <button onclick="filterByCategory('all')" class="prompt-cat-btn active px-3 py-1 text-xs font-semibold rounded-2xl bg-violet-100 text-violet-700 border border-violet-200 transition-colors">全部</button>
+                    <button onclick="filterByCategory('writing')" class="prompt-cat-btn px-3 py-1 text-xs font-semibold rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors">写作</button>
+                    <button onclick="filterByCategory('coding')" class="prompt-cat-btn px-3 py-1 text-xs font-semibold rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors">编程</button>
+                    <button onclick="filterByCategory('analysis')" class="prompt-cat-btn px-3 py-1 text-xs font-semibold rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors">分析</button>
+                    <button onclick="filterByCategory('creative')" class="prompt-cat-btn px-3 py-1 text-xs font-semibold rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors">创意</button>
+                    <button onclick="filterByCategory('translate')" class="prompt-cat-btn px-3 py-1 text-xs font-semibold rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors">翻译</button>
+                    <button onclick="filterByCategory('business')" class="prompt-cat-btn px-3 py-1 text-xs font-semibold rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors">商务</button>
+                </div>
+            </div>
+            <!-- Prompt List -->
+            <div id="prompt-list" class="flex-1 overflow-y-auto p-6 space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav id="navbar" class="bg-white border-b border-slate-100 sticky top-0 z-50">
+        <div class="max-w-screen-xl mx-auto">
+            <div class="px-8 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-x-3">
+                    <!-- Conversation history toggle -->
+                    <button onclick="toggleConvSidebar()" class="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors mr-1" title="对话列表">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                    <div class="w-10 h-10 bg-violet-600 rounded-2xl flex items-center justify-center shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    </div>
+                    <span class="font-display text-2xl font-semibold tracking-tighter">NexusAI</span>
+                </div>
+
+                <div class="hidden md:flex items-center gap-x-8 text-sm">
+                    <a href="#features" class="font-medium text-slate-600 hover:text-slate-900 transition-colors">功能</a>
+                    <a href="#preview" class="font-medium text-slate-600 hover:text-slate-900 transition-colors">实时演示</a>
+                    <a href="#integrations" class="font-medium text-slate-600 hover:text-slate-900 transition-colors">集成</a>
+                    <a href="#pricing" class="font-medium text-slate-600 hover:text-slate-900 transition-colors">定价</a>
+                </div>
+
+                <div class="flex items-center gap-x-3">
+                    <button onclick="document.getElementById('preview').scrollIntoView({ behavior: 'smooth' })" 
+                            class="hidden sm:block px-5 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors">
+                        查看演示
+                    </button>
+                    <button onclick="tryNow()"
+                            class="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 transition-all text-white text-sm font-semibold rounded-2xl shadow-sm flex items-center gap-x-2">
+                        <span>立即试用</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section (Chinese) -->
+    <div class="max-w-screen-xl mx-auto px-6 pt-16 pb-12">
+        <div class="max-w-3xl mx-auto text-center">
+            <div class="inline-flex items-center gap-x-2 px-4 py-1.5 rounded-3xl bg-violet-50 border border-violet-100 mb-6">
+                <div class="px-3 py-0.5 text-xs font-bold tracking-wider text-violet-700 flex items-center gap-x-1.5">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <span>现已支持</span>
+                    <span class="font-black text-emerald-600">DeepSeek-V4-Pro</span>
+                </div>
+            </div>
+
+            <h1 class="text-6xl md:text-7xl font-display font-semibold tracking-tighter leading-none mb-6">
+                您的全能AI助手<br>
+                <span class="text-emerald-600">触手可及</span>
+            </h1>
+            
+            <p class="max-w-lg mx-auto text-xl text-slate-600 mb-8">
+                几分钟内构建智能聊天机器人和AI助手。无需编程，<br>
+                从第一天起就为企业级应用做好准备。现已支持 <span class="font-semibold text-emerald-600">DeepSeek-V4-Pro</span> 模型。
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button onclick="tryNow()"
+                        class="group w-full sm:w-auto px-8 py-4 bg-violet-600 hover:bg-violet-700 active:scale-[0.985] transition-all text-white text-lg font-semibold rounded-3xl flex items-center justify-center gap-x-3 shadow-lg shadow-violet-200">
+                    <span>免费试用 →</span>
+                </button>
+                
+                <button onclick="document.getElementById('preview').scrollIntoView({ behavior: 'smooth' })"
+                        class="w-full sm:w-auto px-8 py-4 border border-slate-200 hover:bg-white transition-all text-slate-700 font-semibold rounded-3xl flex items-center justify-center gap-x-2 text-lg">
+                    <span>查看演示</span>
+                </button>
+            </div>
+            
+            <div class="mt-6 flex items-center justify-center gap-x-2 text-xs text-slate-500">
+                <span class="font-medium">今日已有 48,291 名开发者加入 • DeepSeek-V4-Pro 已上线</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Conversational UI with File Upload -->
+    <div id="preview" class="max-w-screen-xl mx-auto px-6 pb-16">
+        <div class="flex flex-col items-center text-center mb-8">
+            <div class="px-4 py-1 text-xs font-bold tracking-widest text-violet-600 bg-violet-100 rounded-3xl mb-3">实时演示 • 已连接 DeepSeek-V4-Pro</div>
+            <h2 class="section-header tracking-tighter">对话式 UI 体验</h2>
+            <p class="text-slate-600 max-w-md mt-3">体验自然的流式对话，与您的用户将看到的完全一致。现已支持文件上传分析。</p>
+        </div>
+
+        <div class="max-w-[620px] mx-auto">
+            <!-- Chat Window -->
+            <div class="bg-white border border-slate-200 shadow-xl shadow-slate-200/70 rounded-3xl overflow-hidden minimal-shadow">
+                
+                <!-- Chat Header -->
+                <div class="px-5 py-3.5 bg-white border-b flex items-center justify-between">
+                    <div class="flex items-center gap-x-3">
+                        <div class="w-9 h-9 bg-violet-600 rounded-2xl flex items-center justify-center flex-shrink-0 relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            <div class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-[2.5px] border-white rounded-full"></div>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-x-2">
+                                <span class="font-semibold text-lg tracking-tight">NexusAI</span>
+                                <div class="px-2.5 py-px text-[10px] font-bold bg-emerald-100 text-emerald-600 rounded-full flex items-center gap-x-1">
+                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                    <span>在线</span>
+                                </div>
+                            </div>
+                            <div class="text-xs text-emerald-600 -mt-0.5 flex items-center gap-x-1">
+                                <span id="header-model-badge" class="deepseek-badge px-1.5 py-px text-[9px] rounded">DeepSeek-V4-Pro</span>
+                                <span class="text-emerald-500">•</span> 
+                                <span id="header-model-extra">GPT-4 • Claude</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-x-2">
+                        <!-- Prompt Library Button -->
+                        <button onclick="openPromptModal()" title="提示词模板库 (Ctrl+K)" class="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
+                            <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                        </button>
+                        <!-- Settings Button -->
+                        <button onclick="toggleSettings()" title="设置" class="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
+                            <i class="fa-solid fa-gear text-sm"></i>
+                        </button>
+                        <!-- New Conversation -->
+                        <button onclick="newConversation()" title="新对话" class="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
+                            <i class="fa-solid fa-pen-to-square text-sm"></i>
+                        </button>
+                        <div class="text-xs px-3 py-1 bg-emerald-50 text-emerald-600 rounded-2xl font-medium flex items-center gap-x-1">
+                            <i class="fa-solid fa-wifi text-xs"></i>
+                            <span class="font-bold">已连接</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="chat-messages" 
+                     class="chat-container h-[340px] overflow-y-auto p-5 space-y-5 bg-slate-50/70 text-sm">
+                    
+                    <!-- Initial AI Message -->
+                    <div class="flex gap-x-3 msg-row">
+                        <div class="w-8 h-8 rounded-2xl bg-violet-100 flex-shrink-0 flex items-center justify-center mt-0.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="chat-bubble-ai px-5 py-[13px] text-[15px] leading-relaxed shadow-sm border border-violet-100">
+                                你好！我是NexusAI助手。我可以帮你分析文档、编写代码、回答问题。试试上传一个文件，或者直接问我任何问题吧！👋
+                            </div>
+                            <div class="flex items-center gap-x-3 mt-1 px-1">
+                                <span class="text-xs text-violet-500">NexusAI • 刚刚</span>
+                                <div class="msg-actions flex items-center gap-x-1">
+                                    <button class="copy-btn" onclick="copyMessageText(this)" title="复制"><i class="fa-regular fa-copy"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Bar -->
+                <div class="p-4 bg-white border-t">
+                    <div class="flex items-end gap-x-2 bg-slate-100 rounded-3xl px-2 py-1.5 border border-slate-200">
+                        <!-- File Upload Button -->
+                        <button onclick="triggerFileUpload()" 
+                                class="w-9 h-9 flex-shrink-0 flex items-center justify-center text-slate-400 hover:text-violet-600 transition-colors mb-0.5">
+                            <i class="fa-solid fa-paperclip text-lg"></i>
+                        </button>
+                        
+                        <!-- Auto-expand textarea -->
+                        <textarea id="chat-input" 
+                               rows="1"
+                               placeholder="输入消息... 或上传文件进行分析" 
+                               class="flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-slate-400 py-1.5"
+                               onkeydown="handleInputKeydown(event)"
+                               oninput="autoExpandInput(this)"></textarea>
+                        
+                        <!-- Stop Generation Button (hidden by default) -->
+                        <button id="stop-btn" onclick="stopGeneration()" 
+                                class="stop-btn w-9 h-9 flex-shrink-0 bg-red-500 hover:bg-red-600 transition-colors text-white rounded-2xl flex items-center justify-center mb-0.5" title="停止生成">
+                            <i class="fa-solid fa-stop text-xs"></i>
+                        </button>
+                        
+                        <!-- Send Button -->
+                        <button id="send-btn" onclick="sendMessage()"
+                                class="w-9 h-9 flex-shrink-0 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 transition-colors text-white rounded-2xl flex items-center justify-center mb-0.5">
+                            <i class="fa-solid fa-arrow-up text-sm"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="px-1 pt-2 flex items-center justify-between text-[10px]">
+                        <div class="text-slate-400">按 Enter 发送 • Shift+Enter 换行 • 支持流式响应</div>
+                        <button onclick="runQuantumDemo()" 
+                                class="font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-x-1 text-xs transition-colors">
+                            <i class="fa-solid fa-play text-[10px]"></i>
+                            <span class="font-bold">流式演示</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3 text-xs text-emerald-600 font-medium flex items-center justify-center gap-x-1">
+                <i class="fa-solid fa-check-circle"></i>
+                <span>已连接真实 DeepSeek-V4-Pro API • 支持文件上传分析</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- DeepSeek-V4-Pro New Feature Section -->
+    <div class="max-w-screen-xl mx-auto px-6 pb-12">
+        <div class="bg-white border border-emerald-200 rounded-3xl p-8 relative overflow-hidden">
+            <div class="absolute top-4 right-4">
+                <div class="px-4 py-1 bg-emerald-500 text-white text-xs font-bold rounded-2xl flex items-center gap-x-1.5 shadow">
+                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                    <span>全新上线</span>
+                </div>
+            </div>
+            
+            <div class="flex items-start gap-x-4">
+                <div>
+                    <div class="flex items-center gap-x-2 mb-2">
+                        <span class="text-emerald-600 text-2xl">✦</span>
+                        <h3 class="font-bold text-2xl tracking-tight">DeepSeek-V4-Pro</h3>
+                    </div>
+                    <p class="text-slate-600 max-w-md">新一代深度推理模型，现已集成至NexusAI平台。更强大的代码生成、文档分析和多步推理能力。</p>
+                    
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <div class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-2xl">代码生成</div>
+                        <div class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-2xl">文档分析</div>
+                        <div class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-2xl">多步推理</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features (Chinese) -->
+    <div id="features" class="max-w-screen-xl mx-auto px-6 pb-16">
+        <div class="text-center mb-10">
+            <div class="text-xs font-bold tracking-[1.5px] text-violet-600 mb-2">强大功能</div>
+            <h2 class="section-header tracking-tighter">强大的AI功能，简洁优雅</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div class="feature-card bg-white border border-slate-100 p-6 rounded-3xl">
+                <div class="w-11 h-11 flex items-center justify-center bg-violet-100 text-violet-600 rounded-2xl mb-5">
+                    <i class="fa-solid fa-layer-group text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-xl tracking-tight mb-2">多模型支持</h3>
+                <p class="text-slate-600 text-[15px]">通过统一API访问GPT-4、Claude、Gemini和DeepSeek-V4-Pro。</p>
+                <div class="mt-4 flex flex-wrap gap-1.5">
+                    <div class="text-[10px] px-2.5 py-px bg-emerald-100 text-emerald-700 rounded font-medium">DeepSeek-V4-Pro</div>
+                    <div class="text-[10px] px-2.5 py-px bg-slate-100 text-slate-500 rounded font-medium">GPT-4</div>
+                    <div class="text-[10px] px-2.5 py-px bg-slate-100 text-slate-500 rounded font-medium">Claude 3</div>
+                </div>
+            </div>
+
+            <div class="feature-card bg-white border border-slate-100 p-6 rounded-3xl">
+                <div class="w-11 h-11 flex items-center justify-center bg-violet-100 text-violet-600 rounded-2xl mb-5">
+                    <i class="fa-solid fa-code text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-xl tracking-tight mb-2">代码生成</h3>
+                <p class="text-slate-600 text-[15px]">支持50+编程语言的代码生成、解释和调试。由DeepSeek-V4-Pro驱动。</p>
+            </div>
+
+            <div class="feature-card bg-white border border-slate-100 p-6 rounded-3xl">
+                <div class="w-11 h-11 flex items-center justify-center bg-violet-100 text-violet-600 rounded-2xl mb-5">
+                    <i class="fa-solid fa-file-lines text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-xl tracking-tight mb-2">文档分析</h3>
+                <p class="text-slate-600 text-[15px]">上传PDF、文档和图片，获取即时摘要和洞察。支持文件上传分析。</p>
+            </div>
+
+            <div class="feature-card bg-white border border-slate-100 p-6 rounded-3xl">
+                <div class="w-11 h-11 flex items-center justify-center bg-violet-100 text-violet-600 rounded-2xl mb-5">
+                    <i class="fa-solid fa-bolt text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-xl tracking-tight mb-2">流式响应</h3>
+                <p class="text-slate-600 text-[15px]">实时流式传输，即时反馈，无需等待完整响应。DeepSeek-V4-Pro原生支持。</p>
+            </div>
+
+            <div class="feature-card bg-white border border-slate-100 p-6 rounded-3xl">
+                <div class="w-11 h-11 flex items-center justify-center bg-violet-100 text-violet-600 rounded-2xl mb-5">
+                    <i class="fa-solid fa-shield-halved text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-xl tracking-tight mb-2">企业级安全</h3>
+                <p class="text-slate-600 text-[15px]">SOC 2合规，端到端加密，全面的数据隐私控制。</p>
+            </div>
+
+            <div class="feature-card bg-white border border-slate-100 p-6 rounded-3xl">
+                <div class="w-11 h-11 flex items-center justify-center bg-violet-100 text-violet-600 rounded-2xl mb-5">
+                    <i class="fa-solid fa-plug text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-xl tracking-tight mb-2">开发者API &amp; SDK</h3>
+                <p class="text-slate-600 text-[15px]">简单集成，构建强大的AI应用和自定义代理。</p>
+                <div onclick="showCodeModal()" class="mt-4 cursor-pointer inline-flex items-center text-xs font-semibold text-violet-600 hover:text-violet-700">
+                    <span>查看SDK示例</span> 
+                    <i class="fa-solid fa-chevron-right ml-1 text-xs"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommended System Prompts -->
+    <div class="max-w-screen-xl mx-auto px-6 pb-16">
+        <div class="bg-white border border-slate-200 rounded-3xl p-8">
+            <div class="flex items-center gap-x-3 mb-6">
+                <div class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-2xl">DeepSeek-V4-Pro 推荐</div>
+                <h3 class="font-semibold text-xl">系统提示词配置</h3>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-4 text-sm">
+                <div class="sys-prompt-card bg-slate-50 p-4 rounded-2xl border">
+                    <button class="sys-prompt-apply" onclick="applySystemPrompt('你是DeepSeek-V4-Pro，一个深度推理AI助手。请逐步思考问题，在给出最终答案前先进行缜密分析。使用中文回复，保持专业、准确、有条理。')">应用</button>
+                    <button class="sys-prompt-copy" onclick="copySysPrompt(this, '你是DeepSeek-V4-Pro，一个深度推理AI助手。请逐步思考问题，在给出最终答案前先进行缜密分析。使用中文回复，保持专业、准确、有条理。')">复制</button>
+                    <div class="font-mono text-xs text-emerald-600 mb-2">// 通用助手提示词</div>
+                    <div class="text-slate-700">"你是DeepSeek-V4-Pro，一个深度推理AI助手。请逐步思考问题，在给出最终答案前先进行缜密分析。使用中文回复，保持专业、准确、有条理。"</div>
+                </div>
+                <div class="sys-prompt-card bg-slate-50 p-4 rounded-2xl border">
+                    <button class="sys-prompt-apply" onclick="applySystemPrompt('你是一个资深代码审查专家，由DeepSeek-V4-Pro驱动。请审查用户提供的代码，关注：安全性、性能优化、可读性、最佳实践。用中文给出详细的改进建议和修改后的代码。')">应用</button>
+                    <button class="sys-prompt-copy" onclick="copySysPrompt(this, '你是一个资深代码审查专家，由DeepSeek-V4-Pro驱动。请审查用户提供的代码，关注：安全性、性能优化、可读性、最佳实践。用中文给出详细的改进建议和修改后的代码。')">复制</button>
+                    <div class="font-mono text-xs text-emerald-600 mb-2">// 代码审查提示词</div>
+                    <div class="text-slate-700">"你是一个资深代码审查专家，由DeepSeek-V4-Pro驱动。请审查用户提供的代码，关注：安全性、性能优化、可读性、最佳实践。用中文给出详细的改进建议和修改后的代码。"</div>
+                </div>
+                <div class="sys-prompt-card bg-slate-50 p-4 rounded-2xl border">
+                    <button class="sys-prompt-apply" onclick="applySystemPrompt('你是DeepSeek-V4-Pro文档分析专家。请仔细阅读用户上传的文档，提取核心观点、关键数据和行动项。用结构化的中文总结，包含：核心摘要、关键要点、数据亮点、建议行动。')">应用</button>
+                    <button class="sys-prompt-copy" onclick="copySysPrompt(this, '你是DeepSeek-V4-Pro文档分析专家。请仔细阅读用户上传的文档，提取核心观点、关键数据和行动项。用结构化的中文总结，包含：核心摘要、关键要点、数据亮点、建议行动。')">复制</button>
+                    <div class="font-mono text-xs text-emerald-600 mb-2">// 文档分析提示词</div>
+                    <div class="text-slate-700">"你是DeepSeek-V4-Pro文档分析专家。请仔细阅读用户上传的文档，提取核心观点、关键数据和行动项。用结构化的中文总结，包含：核心摘要、关键要点、数据亮点、建议行动。"</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integrations -->
+    <div id="integrations" class="bg-white border-y border-slate-100 py-14">
+        <div class="max-w-screen-xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-9">
+                <div>
+                    <div class="text-xs font-bold tracking-[1.5px] text-violet-600 mb-1">无缝集成</div>
+                    <h2 class="section-header tracking-tighter">与您的技术栈完美连接</h2>
+                </div>
+                <p class="text-slate-600 max-w-xs mt-2 md:mt-0 text-sm">与您已使用的工具完美配合，几分钟内即可部署。</p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                <div class="logo-pill flex items-center gap-x-3 px-5 py-4 bg-white border border-slate-200 rounded-2xl">
+                    <div class="w-8 h-8 bg-[#4A154B] text-white flex items-center justify-center rounded-xl text-sm font-black">S</div>
+                    <span class="font-semibold text-sm">Slack</span>
+                </div>
+                <div class="logo-pill flex items-center gap-x-3 px-5 py-4 bg-white border border-slate-200 rounded-2xl">
+                    <div class="w-8 h-8 bg-[#5865F2] text-white flex items-center justify-center rounded-xl"><i class="fa-brands fa-discord text-lg"></i></div>
+                    <span class="font-semibold text-sm">Discord</span>
+                </div>
+                <div class="logo-pill flex items-center gap-x-3 px-5 py-4 bg-white border border-slate-200 rounded-2xl">
+                    <div class="w-8 h-8 bg-black text-white flex items-center justify-center rounded-xl font-black text-sm">N</div>
+                    <span class="font-semibold text-sm">Notion</span>
+                </div>
+                <div class="logo-pill flex items-center gap-x-3 px-5 py-4 bg-white border border-slate-200 rounded-2xl">
+                    <div class="w-8 h-8 bg-[#24292F] text-white flex items-center justify-center rounded-xl"><i class="fa-brands fa-github text-lg"></i></div>
+                    <span class="font-semibold text-sm">GitHub</span>
+                </div>
+                <div class="logo-pill flex items-center gap-x-3 px-5 py-4 bg-white border border-slate-200 rounded-2xl">
+                    <div class="w-8 h-8 bg-[#FF4A00] text-white flex items-center justify-center rounded-xl font-black">Z</div>
+                    <span class="font-semibold text-sm">Zapier</span>
+                </div>
+                <div class="logo-pill flex items-center gap-x-3 px-5 py-4 bg-white border border-slate-200 rounded-2xl">
+                    <div class="w-8 h-8 bg-black text-white flex items-center justify-center rounded-xl font-black text-sm">V</div>
+                    <span class="font-semibold text-sm">Vercel</span>
+                </div>
+                <div class="logo-pill flex items-center gap-x-3 px-5 py-4 bg-white border border-slate-200 rounded-2xl">
+                    <div class="w-8 h-8 bg-[#FF9900] text-white flex items-center justify-center rounded-xl font-black">A</div>
+                    <span class="font-semibold text-sm">AWS</span>
+                </div>
+                <div class="logo-pill flex items-center gap-x-3 px-5 py-4 bg-white border border-slate-200 rounded-2xl">
+                    <div class="w-8 h-8 bg-[#4285F4] text-white flex items-center justify-center rounded-xl"><i class="fa-brands fa-google text-base"></i></div>
+                    <span class="font-semibold text-sm">Google</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing (Chinese) -->
+    <div id="pricing" class="max-w-screen-xl mx-auto px-6 py-16">
+        <div class="text-center mb-8">
+            <h2 class="section-header tracking-tighter">简单透明的定价</h2>
+            <p class="text-slate-600 mt-2">从免费开始，需要更多时升级。无隐藏费用。</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-5 max-w-4xl mx-auto">
+            <div class="border border-slate-200 bg-white rounded-3xl p-6">
+                <div><div class="font-semibold">免费</div><div class="mt-1 text-4xl font-semibold tracking-tighter">$0</div><div class="text-xs text-slate-500">/月</div></div>
+                <div class="my-5 text-sm space-y-2 text-slate-600">
+                    <div class="flex items-center gap-x-2"><i class="fa-solid fa-check text-emerald-500 w-4"></i> <span>100 消息/天</span></div>
+                    <div class="flex items-center gap-x-2"><i class="fa-solid fa-check text-emerald-500 w-4"></i> <span>GPT-3.5 + DeepSeek-V4-Pro（限量）</span></div>
+                </div>
+                <button onclick="tryNow()" class="w-full py-3 text-sm font-semibold border border-slate-300 hover:bg-slate-50 rounded-2xl transition-colors">开始使用</button>
+            </div>
+            
+            <div class="border-2 border-violet-300 relative bg-white rounded-3xl p-6 shadow">
+                <div class="absolute -top-3 right-5 bg-violet-600 text-white text-[10px] font-black px-4 py-px rounded-2xl tracking-wider">最受欢迎</div>
+                <div><div class="font-semibold">专业版</div><div class="mt-1 flex items-baseline"><span class="text-4xl font-semibold tracking-tighter">$29</span> <span class="ml-1 text-sm text-slate-500">/月</span></div></div>
+                <div class="my-5 text-sm space-y-2 text-slate-600">
+                    <div class="flex items-center gap-x-2"><i class="fa-solid fa-check text-emerald-500 w-4"></i> <span>无限消息</span></div>
+                    <div class="flex items-center gap-x-2"><i class="fa-solid fa-check text-emerald-500 w-4"></i> <span>完整 GPT-4 + Claude + DeepSeek-V4-Pro</span></div>
+                    <div class="flex items-center gap-x-2"><i class="fa-solid fa-check text-emerald-500 w-4"></i> <span>自定义聊天机器人 + 文件上传分析</span></div>
+                </div>
+                <button onclick="tryNow()" class="w-full py-3 text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 rounded-2xl transition-colors">开始免费试用</button>
+            </div>
+            
+            <div class="border border-slate-200 bg-white rounded-3xl p-6">
+                <div><div class="font-semibold">企业版</div><div class="mt-1 text-4xl font-semibold tracking-tighter">定制</div></div>
+                <div class="my-5 text-sm space-y-2 text-slate-600">
+                    <div class="flex items-center gap-x-2"><i class="fa-solid fa-check text-emerald-500 w-4"></i> <span>专业版全部功能</span></div>
+                    <div class="flex items-center gap-x-2"><i class="fa-solid fa-check text-emerald-500 w-4"></i> <span>自定义模型微调 + SSO &amp; SAML</span></div>
+                    <div class="flex items-center gap-x-2"><i class="fa-solid fa-check text-emerald-500 w-4"></i> <span>24/7 专属支持</span></div>
+                </div>
+                <button onclick="contactSales()" class="w-full py-3 text-sm font-semibold border border-slate-300 hover:bg-slate-50 rounded-2xl transition-colors">联系销售</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final CTA -->
+    <div class="max-w-screen-xl mx-auto px-6 pb-16">
+        <div class="bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-3xl px-10 py-14 text-center">
+            <div class="max-w-lg mx-auto">
+                <h2 class="text-4xl font-display tracking-tighter font-semibold">准备好用AI构建了吗？</h2>
+                <p class="mt-3 text-violet-100">加入数千名开发者，构建下一代AI驱动的应用。</p>
+                
+                <div class="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+                    <button onclick="tryNow()" class="px-8 py-3.5 bg-white text-violet-700 hover:bg-violet-50 font-semibold rounded-2xl flex items-center justify-center gap-x-2 transition-all text-sm shadow">免费开始构建 <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    <button onclick="contactSales()" class="px-8 py-3.5 border border-white/40 hover:bg-white/10 font-semibold rounded-2xl flex items-center justify-center gap-x-2 transition-all text-sm">联系销售</button>
+                </div>
+                <div class="mt-6 text-xs text-violet-200">无需信用卡 • 永久免费计划可用</div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-t border-slate-100 bg-white">
+        <div class="max-w-screen-xl mx-auto px-6 py-8 text-xs text-slate-500">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-y-4">
+                <div class="flex items-center gap-x-5"><span class="font-medium text-slate-400">© 2026 NexusAI</span><a href="#" class="hover:text-slate-700">状态</a><a href="#" class="hover:text-slate-700">隐私</a><a href="#" class="hover:text-slate-700">条款</a></div>
+                <div class="flex items-center gap-x-5"><a href="#" class="hover:text-slate-700">文档</a><a href="#" class="hover:text-slate-700">API参考</a><a href="#" class="hover:text-slate-700">博客</a><a href="#" class="hover:text-slate-700">社区</a></div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" accept=".txt,.js,.ts,.py,.java,.c,.cpp,.go,.rs,.rb,.php,.html,.css,.json,.csv,.xml,.yaml,.yml,.md,.sql,.sh,.bat,.log,.ini,.cfg,.conf,.toml,.env,.jsx,.tsx,.vue,.svelte,.swift,.kt,.scala,.lua,.r,.m,.h,.hpp,.cs,.fs,.ex,.exs,.erl,.hs,.ml,.pl,.pm,.t,.zig,.nim,.dart,.jl,.sol,.tf,.proto,.graphql,.gql">
+
+    <!-- Code Modal -->
+    <div id="code-modal" onclick="hideCodeModal()" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-6">
+        <div onclick="event.stopImmediatePropagation()" class="max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl">
+            <div class="px-5 py-4 border-b flex justify-between items-center bg-slate-900 text-white">
+                <div class="flex items-center gap-x-2"><i class="fa-brands fa-js text-yellow-400"></i><span class="font-mono text-sm font-medium">DeepSeek-V4-Pro API 示例（您的密钥）</span></div>
+                <button onclick="hideCodeModal()" class="text-white/70 hover:text-white"><i class="fa-solid fa-times"></i></button>
+            </div>
+            
+            <div class="p-5 space-y-6 max-h-[70vh] overflow-auto text-sm">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-x-2 text-xs font-bold text-emerald-600"><i class="fa-solid fa-terminal"></i><span>DeepSeek-V4-Pro API 调用示例</span></div>
+                        <button class="sdk-copy-btn" onclick="copySdkCode(this, 'sdk-code-1')"><i class="fa-regular fa-copy mr-1"></i>复制代码</button>
+                    </div>
+                    <pre id="sdk-code-1" class="bg-[#0F172A] text-emerald-300 p-4 rounded-2xl text-xs overflow-auto"><code>import { NexusAI } from '@nexusaai/sdk';
+
+const ai = new NexusAI({
+  apiKey: "sk-15c7989e879146328c5ee1e138293148",
+  defaultModel: 'deepseek-v4-pro'
+});
+
+const response = await ai.chat({
+  model: 'deepseek-v4-pro',
+  systemPrompt: '你是一个专业的AI助手，由DeepSeek-V4-Pro驱动。请用中文回复，保持专业且友好。',
+  messages: [{ role: 'user', content: '解释量子计算' }],
+  temperature: 0.7,
+  maxTokens: 4096,
+  stream: true
+});
+
+for await (const chunk of response) {
+  process.stdout.write(chunk.content);
+}</code></pre>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-x-2 text-xs font-bold text-emerald-600"><i class="fa-solid fa-file-upload"></i><span>文件上传 &amp; DeepSeek分析</span></div>
+                        <button class="sdk-copy-btn" onclick="copySdkCode(this, 'sdk-code-2')"><i class="fa-regular fa-copy mr-1"></i>复制代码</button>
+                    </div>
+                    <pre id="sdk-code-2" class="bg-[#0F172A] text-emerald-300 p-4 rounded-2xl text-xs overflow-auto"><code>// 上传文件并用DeepSeek-V4-Pro分析
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('model', 'deepseek-v4-pro');
+formData.append('systemPrompt', '请深入分析这份文档，提取关键信息并用中文总结要点。');
+
+const uploadRes = await fetch('https://api.nexusai.com/v1/upload-and-analyze', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer sk-15c7989e879146328c5ee1e138293148' },
+  body: formData
+});
+
+const result = await uploadRes.json();
+console.log(result.analysis); // DeepSeek分析结果</code></pre>
+                </div>
+            </div>
+            
+            <div class="px-5 py-3 bg-slate-50 flex justify-end text-xs border-t">
+                <button onclick="hideCodeModal()" class="px-4 py-1.5 text-violet-600 font-semibold text-xs">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const DEEPSEEK_API_KEY = "sk-15c7989e879146328c5ee1e138293148";
+        const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
+
+        // ===== STATE MANAGEMENT =====
+        const AppState = {
+            // Settings
+            model: 'deepseek-v4-pro',
+            temperature: 0.7,
+            deepThink: false,
+            systemPrompt: '你是一个由DeepSeek-V4-Pro驱动的智能AI助手。请用中文回复，保持专业、准确、有条理。逐步思考后再给出答案。',
+
+            // Conversations
+            conversations: [],
+            currentConvId: null,
+
+            // Generation state
+            isGenerating: false,
+            abortController: null,
+
+            // Demo mode
+            isDemoMode: false,
+
+            // Init from localStorage
+            init() {
+                try {
+                    const saved = localStorage.getItem('nexusai_state');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.model) this.model = parsed.model;
+                        if (parsed.temperature !== undefined) this.temperature = parsed.temperature;
+                        if (parsed.deepThink !== undefined) this.deepThink = parsed.deepThink;
+                        if (parsed.systemPrompt) this.systemPrompt = parsed.systemPrompt;
+                        if (parsed.conversations) this.conversations = parsed.conversations;
+                        if (parsed.currentConvId) this.currentConvId = parsed.currentConvId;
+                    }
+                } catch (e) { console.warn('Failed to load state:', e); }
+            },
+
+            save() {
+                try {
+                    localStorage.setItem('nexusai_state', JSON.stringify({
+                        model: this.model,
+                        temperature: this.temperature,
+                        deepThink: this.deepThink,
+                        systemPrompt: this.systemPrompt,
+                        conversations: this.conversations,
+                        currentConvId: this.currentConvId
+                    }));
+                } catch (e) { console.warn('Failed to save state:', e); }
+            }
+        };
+
+        // ===== PROMPT TEMPLATES =====
+        const PROMPT_TEMPLATES = [
+            { id: 1, title: '通用AI助手', category: 'writing', icon: 'fa-robot', prompt: '你是一个专业的AI助手。请用中文回复，保持专业、准确、有条理。逐步思考后再给出答案。', desc: '适用于日常问答和通用任务' },
+            { id: 2, title: '代码审查专家', category: 'coding', icon: 'fa-code', prompt: '你是一个资深代码审查专家。请审查用户提供的代码，关注：安全性、性能优化、可读性、最佳实践。用中文给出详细的改进建议和修改后的代码。', desc: '审查代码质量与安全性' },
+            { id: 3, title: '文档分析专家', category: 'analysis', icon: 'fa-file-lines', prompt: '你是文档分析专家。请仔细阅读用户上传的文档，提取核心观点、关键数据和行动项。用结构化的中文总结，包含：核心摘要、关键要点、数据亮点、建议行动。', desc: '提取文档关键信息' },
+            { id: 4, title: '技术博客写手', category: 'writing', icon: 'fa-pen-nib', prompt: '你是一位技术博客写手，擅长将复杂的技术概念用通俗易懂的方式解释。请用中文撰写，风格亲切自然，适当使用比喻和例子。', desc: '撰写技术文章和教程' },
+            { id: 5, title: 'Python 专家', category: 'coding', icon: 'fa-python', prompt: '你是Python编程专家。帮助用户编写高效、Pythonic的代码。遵循PEP 8规范，推荐最佳实践，解释代码逻辑。用中文回复。', desc: 'Python编程辅助' },
+            { id: 6, title: '数据分析师', category: 'analysis', icon: 'fa-chart-line', prompt: '你是一位资深数据分析师。帮助用户分析数据、发现趋势、提供可视化建议。用中文回复，给出清晰的数据洞察和可执行的建议。', desc: '数据分析与洞察' },
+            { id: 7, title: '创意写作助手', category: 'creative', icon: 'fa-lightbulb', prompt: '你是一位创意写作助手，擅长故事创作、文案撰写和创意思维。用中文回复，风格生动有趣，富有感染力。', desc: '故事创作与文案撰写' },
+            { id: 8, title: '专业翻译', category: 'translate', icon: 'fa-language', prompt: '你是一位专业翻译，精通中英双语。翻译时注重信达雅，保持原文意思的同时让译文自然流畅。如遇专业术语请附上原文。', desc: '中英文专业翻译' },
+            { id: 9, title: '商业顾问', category: 'business', icon: 'fa-briefcase', prompt: '你是一位商业顾问，擅长市场分析、商业策略和产品规划。用中文回复，给出专业、可落地的建议，必要时提供数据支持。', desc: '商业策略与市场分析' },
+            { id: 10, title: '面试辅导', category: 'business', icon: 'fa-user-tie', prompt: '你是一位面试辅导专家。帮助用户准备技术面试和行为面试。模拟面试场景，给出详细的回答建议和评分。用中文回复。', desc: '面试准备与模拟' },
+            { id: 11, title: 'SQL 专家', category: 'coding', icon: 'fa-database', prompt: '你是SQL和数据库专家。帮助用户编写高效的SQL查询，优化数据库性能，设计数据库架构。用中文回复，解释查询逻辑。', desc: 'SQL查询与数据库优化' },
+            { id: 12, title: '文案营销', category: 'creative', icon: 'fa-bullhorn', prompt: '你是一位营销文案专家。帮助用户撰写吸引人的广告文案、社交媒体内容和品牌故事。用中文回复，注重转化率和用户共鸣。', desc: '营销文案与品牌内容' },
+            { id: 13, title: '学术论文助手', category: 'writing', icon: 'fa-graduation-cap', prompt: '你是一位学术写作助手。帮助用户撰写、修改和润色学术论文。注重逻辑严密、论证充分、格式规范。用中文回复。', desc: '学术论文撰写与修改' },
+            { id: 14, title: '正则表达式专家', category: 'coding', icon: 'fa-code', prompt: '你是正则表达式专家。帮助用户编写、调试和优化正则表达式。解释每个部分的作用，提供测试用例。用中文回复。', desc: '正则表达式编写与调试' },
+            { id: 15, title: '日语翻译', category: 'translate', icon: 'fa-language', prompt: '你是中日双语翻译专家。翻译时注重日语的敬语体系和语境适配。提供罗马音标注和语法解释。用中文回复。', desc: '中日翻译与语法讲解' },
+        ];
+
+        let currentPromptCategory = 'all';
+
+        // ===== DEMO MODE FALLBACK =====
+        function initDemoMode() {
+            // Try to detect if backend is available
+            AppState.isDemoMode = false;
+            // We'll switch to demo mode on first API failure
+        }
+
+        function enableDemoMode() {
+            AppState.isDemoMode = true;
+            document.getElementById('demo-banner').style.display = 'block';
+            showToast('已切换至本地演示模式');
+        }
+
+        // Demo responses for when API is unavailable
+        const DEMO_RESPONSES = [
+            "你好！这是本地演示模式的回复。后端 API 当前不可用，但我可以展示界面功能。\n\n在演示模式下，我会使用预设的回复来展示流式输出效果。实际部署时，这里将连接到真实的 AI 模型。",
+            "这是一个演示回复。NexusAI 支持多种 AI 模型，包括 GPT-4、Claude、Gemini 和 DeepSeek-V4-Pro。\n\n**主要功能：**\n- 🔄 多模型切换\n- 📁 文件上传分析\n- 💬 多轮上下文对话\n- ⚙️ 温度参数调节\n- 🧠 深度思考模式",
+            "```python\ndef hello_nexusai():\n    \"\"\"NexusAI Demo\"\"\"\n    print(\"欢迎使用 NexusAI！\")\n    print(\"支持 50+ 编程语言的代码生成\")\n    return \"Ready to build!\"\n\nhello_nexusai()\n```\n\n以上是代码生成的演示。在真实模式下，DeepSeek-V4-Pro 可以生成更复杂的代码。",
+            "好的，让我为您分析一下：\n\n📊 **数据分析结果：**\n\n1. **核心指标** — 当前表现良好\n2. **趋势预测** — 呈上升趋势\n3. **风险提示** — 需关注几个关键变量\n4. **建议行动** — 优化现有流程\n\n这只是演示回复。连接真实 API 后，分析将更加精准和详细。"
+        ];
+        let demoResponseIndex = 0;
+
+        // ===== API CALL =====
+        async function callDeepSeek(userMessage, onToken, onError, signal) {
+            // If already in demo mode, use demo
+            if (AppState.isDemoMode) {
+                return callDemoResponse(userMessage, onToken);
+            }
+
+            const messages = [
+                { role: "system", content: AppState.systemPrompt },
+                ...(getCurrentConversationMessages()),
+                { role: "user", content: userMessage }
+            ];
+
+            const modelConfig = getModelConfig(AppState.model);
+            const body = {
+                model: modelConfig.apiModel,
+                messages: messages,
+                stream: true,
+                temperature: AppState.temperature,
+                max_tokens: 4096
+            };
+
+            // Deep thinking mode: use extended thinking if supported
+            if (AppState.deepThink && AppState.model.startsWith('deepseek')) {
+                body.temperature = Math.max(0.1, AppState.temperature - 0.3);
+                body.max_tokens = 8192;
+            }
+
+            try {
+                const response = await fetch(`${modelConfig.baseUrl}/chat/completions`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${modelConfig.apiKey}`
+                    },
+                    body: JSON.stringify(body),
+                    signal: signal
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API Error ${response.status}: ${errorText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop() || "";
+
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const data = line.slice(6).trim();
+                            if (data === "[DONE]") return;
+                            if (data) {
+                                try {
+                                    const json = JSON.parse(data);
+                                    const content = json.choices?.[0]?.delta?.content;
+                                    if (content) onToken(content);
+                                } catch (e) {}
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') return; // User stopped
+                console.error("API Error:", error);
+                // Fallback to demo mode on connection error
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('ERR_')) {
+                    enableDemoMode();
+                    return callDemoResponse(userMessage, onToken);
+                }
+                if (onError) onError(error);
+            }
+        }
+
+        async function callDemoResponse(userMessage, onToken) {
+            const response = DEMO_RESPONSES[demoResponseIndex % DEMO_RESPONSES.length];
+            demoResponseIndex++;
+            
+            // Simulate streaming
+            for (let i = 0; i < response.length; i++) {
+                if (AppState.abortController?.signal?.aborted) break;
+                onToken(response[i]);
+                await new Promise(r => setTimeout(r, 15 + Math.random() * 25));
+            }
+        }
+
+        function getModelConfig(model) {
+            const configs = {
+                'deepseek-v4-pro': { apiModel: 'deepseek-chat', baseUrl: DEEPSEEK_BASE_URL, apiKey: DEEPSEEK_API_KEY },
+                'gpt-4': { apiModel: 'gpt-4', baseUrl: DEEPSEEK_BASE_URL, apiKey: DEEPSEEK_API_KEY },
+                'gpt-3.5-turbo': { apiModel: 'gpt-3.5-turbo', baseUrl: DEEPSEEK_BASE_URL, apiKey: DEEPSEEK_API_KEY },
+                'claude-3-opus': { apiModel: 'claude-3-opus', baseUrl: DEEPSEEK_BASE_URL, apiKey: DEEPSEEK_API_KEY },
+                'claude-3-sonnet': { apiModel: 'claude-3-sonnet', baseUrl: DEEPSEEK_BASE_URL, apiKey: DEEPSEEK_API_KEY },
+                'gemini-pro': { apiModel: 'gemini-pro', baseUrl: DEEPSEEK_BASE_URL, apiKey: DEEPSEEK_API_KEY }
+            };
+            return configs[model] || configs['deepseek-v4-pro'];
+        }
+
+        // ===== CONVERSATION MANAGEMENT =====
+        function getCurrentConversationMessages() {
+            const conv = AppState.conversations.find(c => c.id === AppState.currentConvId);
+            if (!conv) return [];
+            return conv.messages.filter(m => m.role !== 'system').slice(-10); // Last 10 messages for context
+        }
+
+        function getCurrentConversation() {
+            return AppState.conversations.find(c => c.id === AppState.currentConvId);
+        }
+
+        function newConversation() {
+            const conv = {
+                id: Date.now().toString(),
+                title: '新对话',
+                messages: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            AppState.conversations.unshift(conv);
+            AppState.currentConvId = conv.id;
+            AppState.save();
+            
+            // Clear chat UI
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = '';
+            addWelcomeMessage();
+            renderConvList();
+            showToast('已创建新对话');
+        }
+
+        function switchConversation(convId) {
+            AppState.currentConvId = convId;
+            AppState.save();
+            renderConversation(convId);
+            renderConvList();
+            toggleConvSidebar();
+        }
+
+        function deleteConversation(convId, e) {
+            e.stopPropagation();
+            AppState.conversations = AppState.conversations.filter(c => c.id !== convId);
+            if (AppState.currentConvId === convId) {
+                if (AppState.conversations.length > 0) {
+                    AppState.currentConvId = AppState.conversations[0].id;
+                } else {
+                    newConversation();
+                    return;
+                }
+            }
+            AppState.save();
+            renderConversation(AppState.currentConvId);
+            renderConvList();
+            showToast('对话已删除');
+        }
+
+        function renderConversation(convId) {
+            const conv = AppState.conversations.find(c => c.id === convId);
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = '';
+
+            if (!conv || conv.messages.length === 0) {
+                addWelcomeMessage();
+                return;
+            }
+
+            conv.messages.forEach(msg => {
+                if (msg.role === 'user') {
+                    addUserMessageBubble(msg.content, false);
+                } else if (msg.role === 'assistant') {
+                    addAIMessageBubble(msg.content, false);
+                }
+            });
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function renderConvList() {
+            const list = document.getElementById('conv-list');
+            if (!list) return;
+            
+            list.innerHTML = AppState.conversations.map(conv => `
+                <div onclick="switchConversation('${conv.id}')" 
+                     class="flex items-center justify-between px-4 py-3 rounded-2xl cursor-pointer transition-colors group ${conv.id === AppState.currentConvId ? 'bg-violet-50 border border-violet-200' : 'hover:bg-slate-50 border border-transparent'}">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate ${conv.id === AppState.currentConvId ? 'text-violet-700' : 'text-slate-700'}">${escapeHtml(conv.title)}</div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">${formatTime(conv.updatedAt)}</div>
+                    </div>
+                    <button onclick="deleteConversation('${conv.id}', event)" 
+                            class="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-all ml-2">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addWelcomeMessage() {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = `
+                <div class="flex gap-x-3 msg-row">
+                    <div class="w-8 h-8 rounded-2xl bg-violet-100 flex-shrink-0 flex items-center justify-center mt-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="chat-bubble-ai px-5 py-[13px] text-[15px] leading-relaxed shadow-sm border border-violet-100">
+                            你好！我是NexusAI助手。我可以帮你分析文档、编写代码、回答问题。试试上传一个文件，或者直接问我任何问题吧！👋
+                        </div>
+                        <div class="flex items-center gap-x-3 mt-1 px-1">
+                            <span class="text-xs text-violet-500">NexusAI • 刚刚</span>
+                            <div class="msg-actions flex items-center gap-x-1">
+                                <button class="copy-btn" onclick="copyMessageText(this)" title="复制"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // ===== MESSAGE RENDERING =====
+        function addUserMessageBubble(text, save = true) {
+            const chatMessages = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'flex justify-end';
+            div.innerHTML = `<div class="max-w-[82%]"><div class="chat-bubble-user px-5 py-3 text-[15px] shadow-sm">${escapeHtml(text)}</div><div class="text-right mt-1"><span class="text-[10px] text-slate-400 font-medium">您 • 刚刚</span></div></div>`;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            if (save) {
+                const conv = getCurrentConversation();
+                if (conv) {
+                    conv.messages.push({ role: 'user', content: text });
+                    // Auto-title from first message
+                    if (conv.messages.filter(m => m.role === 'user').length === 1) {
+                        conv.title = text.substring(0, 30) + (text.length > 30 ? '...' : '');
+                    }
+                    conv.updatedAt = new Date().toISOString();
+                    AppState.save();
+                    renderConvList();
+                }
+            }
+        }
+
+        function addAIMessageBubble(text, save = true) {
+            const chatMessages = document.getElementById('chat-messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex gap-x-3 msg-row';
+            wrapper.innerHTML = `
+                <div class="w-8 h-8 rounded-2xl bg-violet-100 flex-shrink-0 flex items-center justify-center mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="chat-bubble-ai px-5 py-[13px] text-[15px] leading-relaxed shadow-sm border border-violet-100 streaming-text">${formatAIText(text)}</div>
+                    <div class="flex items-center gap-x-3 mt-1 px-1">
+                        <span class="text-xs text-violet-500">NexusAI • ${getTimestamp()}</span>
+                        <div class="msg-actions flex items-center gap-x-1">
+                            <button class="copy-btn" onclick="copyMessageText(this)" title="复制回复"><i class="fa-regular fa-copy"></i></button>
+                            <button class="feedback-btn" onclick="giveFeedback(this, 'like')" title="有用"><i class="fa-regular fa-thumbs-up"></i></button>
+                            <button class="feedback-btn" onclick="giveFeedback(this, 'dislike')" title="无用"><i class="fa-regular fa-thumbs-down"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            chatMessages.appendChild(wrapper);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            if (save) {
+                const conv = getCurrentConversation();
+                if (conv) {
+                    conv.messages.push({ role: 'assistant', content: text });
+                    conv.updatedAt = new Date().toISOString();
+                    AppState.save();
+                }
+            }
+        }
+
+        function formatAIText(text) {
+            // Basic markdown: code blocks, bold, inline code
+            let html = escapeHtml(text);
+            
+            // Code blocks
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+                const id = 'code-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+                return `<div class="code-block-wrapper my-2"><button class="code-copy-btn" onclick="copyCodeBlock(this, '${id}')"><i class="fa-regular fa-copy mr-1"></i>复制</button><pre class="bg-[#0F172A] text-emerald-300 p-4 rounded-2xl text-xs overflow-auto"><code id="${id}">${code.trim()}</code></pre></div>`;
+            });
+            
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code class="bg-slate-200 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>');
+            
+            // Bold
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            
+            // Line breaks
+            html = html.replace(/\n/g, '<br>');
+            
+            return html;
+        }
+
+        // ===== SEND MESSAGE =====
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const value = input.value.trim();
+            if (!value || AppState.isGenerating) return;
+
+            input.value = '';
+            autoExpandInput(input);
+            addUserMessageBubble(value);
+
+            // Create streaming AI bubble
+            const chatMessages = document.getElementById('chat-messages');
+            const aiWrapper = document.createElement('div');
+            aiWrapper.className = 'flex gap-x-3 msg-row';
+            aiWrapper.innerHTML = `
+                <div class="w-8 h-8 rounded-2xl bg-violet-100 flex-shrink-0 flex items-center justify-center mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="ai-stream-bubble chat-bubble-ai px-5 py-[13px] text-[15px] leading-relaxed shadow-sm border border-violet-100 streaming-text"><span class="text-violet-400">${AppState.deepThink ? '深度思考中...' : '思考中...'}</span></div>
+                    <div class="flex items-center gap-x-3 mt-1 px-1">
+                        <span class="text-xs text-violet-500">NexusAI • ${getTimestamp()}</span>
+                    </div>
+                </div>`;
+            chatMessages.appendChild(aiWrapper);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const bubble = aiWrapper.querySelector('.ai-stream-bubble');
+            let fullResponse = '';
+
+            // Show stop button, hide send button
+            setGenerating(true);
+
+            AppState.abortController = new AbortController();
+
+            await callDeepSeek(value,
+                (token) => {
+                    if (!fullResponse) bubble.innerHTML = ''; // Clear "thinking..." on first token
+                    fullResponse += token;
+                    bubble.innerHTML = formatAIText(fullResponse);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                },
+                (error) => {
+                    bubble.innerHTML = `<span class="text-red-500">错误: ${escapeHtml(error.message)}</span>`;
+                },
+                AppState.abortController.signal
+            );
+
+            // Save AI response
+            if (fullResponse) {
+                const conv = getCurrentConversation();
+                if (conv) {
+                    conv.messages.push({ role: 'assistant', content: fullResponse });
+                    conv.updatedAt = new Date().toISOString();
+                    AppState.save();
+                }
+
+                // Add action buttons to completed message
+                const actionDiv = document.createElement('div');
+                actionDiv.className = 'flex items-center gap-x-1 mt-1 px-1';
+                actionDiv.innerHTML = `
+                    <button class="copy-btn" onclick="copyMessageText(this)" title="复制回复"><i class="fa-regular fa-copy"></i></button>
+                    <button class="feedback-btn" onclick="giveFeedback(this, 'like')" title="有用"><i class="fa-regular fa-thumbs-up"></i></button>
+                    <button class="feedback-btn" onclick="giveFeedback(this, 'dislike')" title="无用"><i class="fa-regular fa-thumbs-down"></i></button>
+                    <button class="copy-btn" onclick="regenerateResponse(this)" title="重新生成" style="margin-left:4px"><i class="fa-solid fa-rotate-right"></i></button>
+                `;
+                aiWrapper.querySelector('.flex-1').appendChild(actionDiv);
+            }
+
+            setGenerating(false);
+        }
+
+        function setGenerating(isGen) {
+            AppState.isGenerating = isGen;
+            const sendBtn = document.getElementById('send-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            if (isGen) {
+                sendBtn.style.display = 'none';
+                stopBtn.style.display = 'flex';
+            } else {
+                sendBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        function stopGeneration() {
+            if (AppState.abortController) {
+                AppState.abortController.abort();
+            }
+            setGenerating(false);
+            showToast('已停止生成');
+        }
+
+        function regenerateResponse(btn) {
+            const conv = getCurrentConversation();
+            if (!conv) return;
+            
+            // Find last user message
+            const lastUserMsg = [...conv.messages].reverse().find(m => m.role === 'user');
+            if (!lastUserMsg) return;
+
+            // Remove last AI message
+            conv.messages.pop();
+            AppState.save();
+
+            // Remove the AI bubble from UI
+            const msgRow = btn.closest('.msg-row');
+            if (msgRow) msgRow.remove();
+
+            // Set input and trigger send
+            document.getElementById('chat-input').value = lastUserMsg.content;
+            sendMessage();
+        }
+
+        // ===== FILE HANDLING =====
+        function triggerFileUpload() {
+            document.getElementById('file-input').click();
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const chatMessages = document.getElementById('chat-messages');
+
+            // Add user file message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'flex justify-end';
+            userDiv.innerHTML = `
+                <div class="max-w-[82%]">
+                    <div class="chat-bubble-user px-5 py-3 text-[15px] shadow-sm flex items-center gap-x-2">
+                        <i class="fa-solid fa-file text-lg"></i>
+                        <span>已上传文件: ${escapeHtml(file.name)}</span>
+                        <span class="text-xs opacity-70">(${formatFileSize(file.size)})</span>
+                    </div>
+                    <div class="text-right mt-1"><span class="text-[10px] text-slate-400 font-medium">您 • 刚刚</span></div>
+                </div>`;
+            chatMessages.appendChild(userDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Save to conversation
+            const conv = getCurrentConversation();
+            if (conv) {
+                conv.messages.push({ role: 'user', content: `[上传文件: ${file.name}]` });
+                conv.updatedAt = new Date().toISOString();
+                AppState.save();
+            }
+
+            // Read file locally for text-based files
+            let fileContent = '';
+            const textTypes = ['.txt','.js','.ts','.py','.java','.c','.cpp','.go','.rs','.rb','.php','.html','.css','.json','.csv','.xml','.yaml','.yml','.md','.sql','.sh','.bat','.log','.ini','.cfg','.conf','.toml','.env','.jsx','.tsx','.vue','.svelte','.swift','.kt','.scala','.lua','.r','.m','.h','.hpp','.cs','.fs','.ex','.exs','.erl','.hs','.ml','.pl','.pm','.t','.zig','.nim','.dart','.jl','.sol','.tf','.proto','.graphql','.gql'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (textTypes.includes(ext) || file.type.startsWith('text/')) {
+                try {
+                    fileContent = await readFileAsText(file);
+                } catch (e) {
+                    console.warn('Failed to read file:', e);
+                }
+            }
+
+            // Create AI analysis bubble
+            const aiWrapper = document.createElement('div');
+            aiWrapper.className = 'flex gap-x-3 msg-row';
+            aiWrapper.innerHTML = `
+                <div class="w-8 h-8 rounded-2xl bg-violet-100 flex-shrink-0 flex items-center justify-center mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="ai-stream-bubble chat-bubble-ai px-5 py-[13px] text-[15px] leading-relaxed shadow-sm border border-violet-100 streaming-text">
+                        <span class="text-emerald-600">正在使用 ${getSelectedModelName()} 分析文件...</span>
+                    </div>
+                    <div class="text-xs text-violet-500 mt-1 px-1">NexusAI • 文件分析</div>
+                </div>`;
+            chatMessages.appendChild(aiWrapper);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const bubble = aiWrapper.querySelector('.ai-stream-bubble');
+            let fullResponse = '';
+
+            setGenerating(true);
+            AppState.abortController = new AbortController();
+
+            let analysisPrompt = `用户上传了文件 "${file.name}"（类型: ${file.type || '未知'}，大小: ${formatFileSize(file.size)}）。`;
+            
+            if (fileContent) {
+                // For text files, include actual content (truncated)
+                const truncated = fileContent.substring(0, 8000);
+                analysisPrompt += `\n\n文件内容如下：\n\`\`\`\n${truncated}\n\`\`\`\n\n请用中文对这个文件进行深入分析，包括：核心内容摘要、关键要点、代码质量评估（如适用）、潜在问题和改进建议。`;
+            } else {
+                analysisPrompt += `\n\n这是一个非文本文件（如PDF、Word、图片等）。后端分析接口预留中，当前请用中文给出该文件类型的通用分析建议和使用场景说明。`;
+            }
+
+            await callDeepSeek(analysisPrompt,
+                (token) => {
+                    if (!fullResponse) bubble.innerHTML = '';
+                    fullResponse += token;
+                    bubble.innerHTML = formatAIText(fullResponse);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                },
+                (error) => {
+                    bubble.innerHTML = `<span class="text-red-500">文件分析失败: ${escapeHtml(error.message)}</span>`;
+                },
+                AppState.abortController.signal
+            );
+
+            if (fullResponse) {
+                const conv2 = getCurrentConversation();
+                if (conv2) {
+                    conv2.messages.push({ role: 'assistant', content: fullResponse });
+                    conv2.updatedAt = new Date().toISOString();
+                    AppState.save();
+                }
+            }
+
+            setGenerating(false);
+            event.target.value = '';
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        // ===== COPY FUNCTIONS =====
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板'));
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('已复制到剪贴板');
+            }
+        }
+
+        function copyMessageText(btn) {
+            const bubble = btn.closest('.flex-1').querySelector('.chat-bubble-ai, .chat-bubble-user');
+            if (!bubble) return;
+            const text = bubble.innerText;
+            copyToClipboard(text);
+            btn.classList.add('copied');
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+            }, 2000);
+        }
+
+        function copyCodeBlock(btn, codeId) {
+            const code = document.getElementById(codeId);
+            if (!code) return;
+            copyToClipboard(code.textContent);
+            btn.classList.add('copied');
+            btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>已复制';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.innerHTML = '<i class="fa-regular fa-copy mr-1"></i>复制';
+            }, 2000);
+        }
+
+        function copySdkCode(btn, preId) {
+            const pre = document.getElementById(preId);
+            if (!pre) return;
+            copyToClipboard(pre.textContent);
+            btn.classList.add('copied');
+            btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>已复制';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.innerHTML = '<i class="fa-regular fa-copy mr-1"></i>复制代码';
+            }, 2000);
+        }
+
+        function copySysPrompt(btn, text) {
+            copyToClipboard(text);
+            btn.classList.add('copied');
+            btn.textContent = '已复制';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.textContent = '复制';
+            }, 2000);
+        }
+
+        // ===== SYSTEM PROMPT APPLICATION =====
+        function applySystemPrompt(text) {
+            AppState.systemPrompt = text;
+            document.getElementById('system-prompt').value = text;
+            AppState.save();
+            showToast('系统提示词已应用');
+        }
+
+        // ===== FEEDBACK =====
+        function giveFeedback(btn, type) {
+            const allBtns = btn.parentElement.querySelectorAll('.feedback-btn');
+            const wasActive = btn.classList.contains('active-' + type);
+            
+            allBtns.forEach(b => {
+                b.classList.remove('active-like', 'active-dislike');
+            });
+
+            if (!wasActive) {
+                btn.classList.add('active-' + type);
+                showToast(type === 'like' ? '感谢反馈！👍' : '收到反馈，我们会改进');
+            }
+        }
+
+        // ===== INPUT HANDLING =====
+        function handleInputKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function autoExpandInput(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
+        // ===== SETTINGS =====
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            const overlay = document.getElementById('settings-overlay');
+            panel.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        function onModelChange(model) {
+            AppState.model = model;
+            AppState.save();
+            updateModelBadge();
+            showToast(`已切换至 ${getSelectedModelName()}`);
+        }
+
+        function onTempChange(value) {
+            AppState.temperature = parseFloat(value);
+            document.getElementById('temp-value').textContent = value;
+            AppState.save();
+        }
+
+        function toggleDeepThink() {
+            AppState.deepThink = !AppState.deepThink;
+            const toggle = document.getElementById('deep-think-toggle');
+            toggle.classList.toggle('active', AppState.deepThink);
+            AppState.save();
+            showToast(AppState.deepThink ? '已开启深度思考模式 🧠' : '已关闭深度思考模式');
+        }
+
+        function onSystemPromptChange(value) {
+            AppState.systemPrompt = value;
+            AppState.save();
+        }
+
+        function updateModelBadge() {
+            const badge = document.getElementById('header-model-badge');
+            const names = {
+                'deepseek-v4-pro': 'DeepSeek-V4-Pro',
+                'gpt-4': 'GPT-4',
+                'gpt-3.5-turbo': 'GPT-3.5',
+                'claude-3-opus': 'Claude 3 Opus',
+                'claude-3-sonnet': 'Claude 3 Sonnet',
+                'gemini-pro': 'Gemini Pro'
+            };
+            badge.textContent = names[AppState.model] || AppState.model;
+        }
+
+        function getSelectedModelName() {
+            const sel = document.getElementById('model-select');
+            return sel.options[sel.selectedIndex].text;
+        }
+
+        // ===== CONVERSATION SIDEBAR =====
+        function toggleConvSidebar() {
+            const sidebar = document.getElementById('conv-sidebar');
+            const overlay = document.getElementById('conv-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        // ===== PROMPT LIBRARY =====
+        function openPromptModal() {
+            document.getElementById('prompt-modal').classList.add('open');
+            renderPromptList();
+            setTimeout(() => document.getElementById('prompt-search').focus(), 100);
+        }
+
+        function closePromptModal() {
+            document.getElementById('prompt-modal').classList.remove('open');
+        }
+
+        function renderPromptList(prompts) {
+            const list = document.getElementById('prompt-list');
+            const items = prompts || PROMPT_TEMPLATES;
+            
+            list.innerHTML = items.map(p => `
+                <div class="prompt-card" onclick="usePromptTemplate(${p.id})">
+                    <div class="flex items-start gap-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid ${p.icon} text-violet-600 text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-sm text-slate-800">${escapeHtml(p.title)}</div>
+                            <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(p.desc)}</div>
+                            <div class="text-xs text-slate-400 mt-2 line-clamp-2">${escapeHtml(p.prompt.substring(0, 80))}...</div>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">${getCategoryLabel(p.category)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function usePromptTemplate(id) {
+            const template = PROMPT_TEMPLATES.find(p => p.id === id);
+            if (!template) return;
+            
+            AppState.systemPrompt = template.prompt;
+            document.getElementById('system-prompt').value = template.prompt;
+            AppState.save();
+            closePromptModal();
+            showToast(`已应用提示词: ${template.title}`);
+        }
+
+        function filterPrompts(query) {
+            const q = query.toLowerCase();
+            let filtered = PROMPT_TEMPLATES;
+            if (currentPromptCategory !== 'all') {
+                filtered = filtered.filter(p => p.category === currentPromptCategory);
+            }
+            if (q) {
+                filtered = filtered.filter(p => 
+                    p.title.toLowerCase().includes(q) || 
+                    p.desc.toLowerCase().includes(q) || 
+                    p.prompt.toLowerCase().includes(q)
+                );
+            }
+            renderPromptList(filtered);
+        }
+
+        function filterByCategory(cat) {
+            currentPromptCategory = cat;
+            // Update category buttons
+            document.querySelectorAll('.prompt-cat-btn').forEach(btn => {
+                if (btn.textContent.trim() === getCategoryLabel(cat) || (cat === 'all' && btn.textContent.trim() === '全部')) {
+                    btn.className = 'prompt-cat-btn active px-3 py-1 text-xs font-semibold rounded-2xl bg-violet-100 text-violet-700 border border-violet-200 transition-colors';
+                } else {
+                    btn.className = 'prompt-cat-btn px-3 py-1 text-xs font-semibold rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors';
+                }
+            });
+            filterPrompts(document.getElementById('prompt-search').value);
+        }
+
+        function getCategoryLabel(cat) {
+            const labels = { all: '全部', writing: '写作', coding: '编程', analysis: '分析', creative: '创意', translate: '翻译', business: '商务' };
+            return labels[cat] || cat;
+        }
+
+        // ===== STREAMING DEMO =====
+        async function runQuantumDemo() {
+            const chatMessages = document.getElementById('chat-messages');
+            
+            addUserMessageBubble('解释量子计算，用简单的方式');
+
+            const aiWrapper = document.createElement('div');
+            aiWrapper.className = 'flex gap-x-3 msg-row';
+            aiWrapper.innerHTML = `
+                <div class="w-8 h-8 rounded-2xl bg-violet-100 flex-shrink-0 flex items-center justify-center mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="ai-stream-bubble chat-bubble-ai px-5 py-[13px] text-[15px] leading-relaxed shadow-sm border border-violet-100 streaming-text"></div>
+                    <div class="flex items-center gap-x-3 mt-1 px-1">
+                        <span class="text-xs text-violet-500">NexusAI • ${getTimestamp()}（实时）</span>
+                    </div>
+                </div>`;
+            chatMessages.appendChild(aiWrapper);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const bubble = aiWrapper.querySelector('.ai-stream-bubble');
+            let fullResponse = '';
+
+            setGenerating(true);
+            AppState.abortController = new AbortController();
+
+            await callDeepSeek("解释量子计算，用简单的方式",
+                (token) => {
+                    fullResponse += token;
+                    bubble.innerHTML = formatAIText(fullResponse);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                },
+                (error) => { bubble.innerHTML = `<span class="text-red-500">错误: ${escapeHtml(error.message)}</span>`; },
+                AppState.abortController.signal
+            );
+
+            if (fullResponse) {
+                const conv = getCurrentConversation();
+                if (conv) {
+                    conv.messages.push({ role: 'user', content: '解释量子计算，用简单的方式' });
+                    conv.messages.push({ role: 'assistant', content: fullResponse });
+                    conv.updatedAt = new Date().toISOString();
+                    AppState.save();
+                }
+            }
+
+            setGenerating(false);
+        }
+
+        // ===== NAVIGATION =====
+        function tryNow() {
+            document.getElementById('preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                const input = document.getElementById('chat-input');
+                if (input) input.focus();
+            }, 1200);
+        }
+
+        function contactSales() {
+            const modalHTML = `<div class="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-6" onclick="this.remove()">
+                <div onclick="event.stopImmediatePropagation()" class="bg-white max-w-md w-full rounded-3xl p-8">
+                    <h3 class="font-semibold text-2xl tracking-tight">联系我们的销售团队</h3>
+                    <p class="text-slate-600 mt-2">我们将在24小时内回复您，讨论DeepSeek-V4-Pro企业需求。</p>
+                    <div class="mt-6 space-y-4">
+                        <input type="text" placeholder="姓名" class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm">
+                        <input type="email" placeholder="工作邮箱" class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm">
+                        <input type="text" placeholder="公司" class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm">
+                        <textarea placeholder="您希望用DeepSeek-V4-Pro构建什么？" rows="3" class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm resize-y"></textarea>
+                    </div>
+                    <div class="flex gap-3 mt-7">
+                        <button onclick="this.closest('.fixed').remove()" class="flex-1 py-3 text-sm font-semibold border border-slate-300 rounded-2xl">取消</button>
+                        <button onclick="submitDemoRequest(this)" class="flex-1 py-3 text-sm font-semibold bg-violet-600 text-white rounded-2xl">提交请求</button>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function submitDemoRequest(btn) {
+            btn.innerHTML = `<span class="flex items-center justify-center gap-x-2"><i class="fa-solid fa-check"></i> 请求已发送！</span>`;
+            setTimeout(() => {
+                btn.closest('.fixed').remove();
+                showToast('感谢！我们的团队将尽快与您联系。');
+            }, 1400);
+        }
+
+        // ===== CODE MODAL =====
+        function showCodeModal() {
+            document.getElementById('code-modal').classList.remove('hidden');
+            document.getElementById('code-modal').classList.add('flex');
+        }
+
+        function hideCodeModal() {
+            const modal = document.getElementById('code-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        // ===== TOAST =====
+        function showToast(text) {
+            const toast = document.getElementById('nx-toast');
+            document.getElementById('nx-toast-text').textContent = text;
+            toast.classList.add('show');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ===== HELPERS =====
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        function formatTime(isoString) {
+            try {
+                const d = new Date(isoString);
+                const now = new Date();
+                const diff = now - d;
+                if (diff < 60000) return '刚刚';
+                if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前';
+                if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
+                return d.toLocaleDateString('zh-CN');
+            } catch (e) { return ''; }
+        }
+
+        function getTimestamp() {
+            return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ===== INITIALIZATION =====
+        function initializeLandingPage() {
+            // Load saved state
+            AppState.init();
+
+            // Restore UI from state
+            document.getElementById('model-select').value = AppState.model;
+            document.getElementById('temp-slider').value = AppState.temperature;
+            document.getElementById('temp-value').textContent = AppState.temperature;
+            document.getElementById('system-prompt').value = AppState.systemPrompt;
+            document.getElementById('deep-think-toggle').classList.toggle('active', AppState.deepThink);
+            updateModelBadge();
+
+            // Init conversations
+            if (AppState.conversations.length === 0) {
+                newConversation();
+            } else if (!AppState.currentConvId || !AppState.conversations.find(c => c.id === AppState.currentConvId)) {
+                AppState.currentConvId = AppState.conversations[0].id;
+            }
+            renderConvList();
+            renderConversation(AppState.currentConvId);
+
+            // Init demo mode detection
+            initDemoMode();
+
+            // Navbar scroll effect
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 20) navbar.classList.add('bg-white/95', 'backdrop-blur-lg');
+                else navbar.classList.remove('bg-white/95', 'backdrop-blur-lg');
+            });
+
+            // Input focus effect
+            const input = document.getElementById('chat-input');
+            input.addEventListener('focus', () => { input.parentElement.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)'; });
+            input.addEventListener('blur', () => { input.parentElement.style.boxShadow = 'none'; });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl/Cmd + K: Open prompt library
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    openPromptModal();
+                }
+                // Escape: Close modals
+                if (e.key === 'Escape') {
+                    closePromptModal();
+                    hideCodeModal();
+                    if (document.getElementById('settings-panel').classList.contains('open')) toggleSettings();
+                    if (document.getElementById('conv-sidebar').classList.contains('open')) toggleConvSidebar();
+                }
+                // ? key on body: Quick demo
+                if (e.key === "?" && document.activeElement.tagName === "BODY") {
+                    e.preventDefault();
+                    document.getElementById('preview').scrollIntoView({ behavior: "smooth" });
+                    setTimeout(() => runQuantumDemo(), 900);
+                }
+            });
+
+            console.log('%c[NexusAI] 中文版落地页已加载 • 支持真实DeepSeek-V4-Pro流式 + 文件上传 + 22项增强功能', 'color:#64748b');
+        }
+
+        window.onload = initializeLandingPage;
+    </script>
+</body>
+</html>
